@@ -4,8 +4,9 @@ defmodule YoutubeLiveCaptionWeb.PageLive do
   alias YoutubeLiveCaption.HTTPClient
 
   @impl true
-  def mount(%{"seq" => seq}, _session, socket) do
-    {:ok, assign(socket, url: "", text: "", seq: String.to_integer(seq) || 1)}
+  def mount(params, _session, socket) do
+    seq = Map.get(params, "seq", "1")
+    {:ok, assign(socket, url: "", text: "", seq: String.to_integer(seq))}
   end
 
   @impl true

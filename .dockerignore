@@ -1,0 +1,10 @@
+.log
+tmp
+_build
+deps
+*.ez
+.elixir_ls
+erl_crash.dump
+cover
+deps
+test
