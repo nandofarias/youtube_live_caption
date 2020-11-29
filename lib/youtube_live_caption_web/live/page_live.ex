@@ -1,39 +1,33 @@
 defmodule YoutubeLiveCaptionWeb.PageLive do
   use YoutubeLiveCaptionWeb, :live_view
 
+  alias YoutubeLiveCaption.HTTPClient
+
   @impl true
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, query: "", results: %{})}
+  def mount(%{"seq" => seq}, _session, socket) do
+    {:ok, assign(socket, url: "", text: "", seq: String.to_integer(seq) || 1)}
   end
 
   @impl true
-  def handle_event("suggest", %{"q" => query}, socket) do
-    {:noreply, assign(socket, results: search(query), query: query)}
-  end
-
-  @impl true
-  def handle_event("search", %{"q" => query}, socket) do
-    case search(query) do
-      %{^query => vsn} ->
-        {:noreply, redirect(socket, external: "https://hexdocs.pm/#{query}/#{vsn}")}
-
-      _ ->
+  def handle_event("post", %{"url" => url, "text" => text}, socket = %{assigns: %{seq: seq}}) do
+    case HTTPClient.post_caption(url, text, seq) do
+      :ok ->
         {:noreply,
          socket
-         |> put_flash(:error, "No dependencies found matching \"#{query}\"")
-         |> assign(results: %{}, query: query)}
-    end
-  end
+         |> put_flash(:info, "Caption(#{seq}): #{text}")
+         |> assign(seq: seq + 1, url: url)}
 
-  defp search(query) do
-    if not YoutubeLiveCaptionWeb.Endpoint.config(:code_reloader) do
-      raise "action disabled when not in development"
-    end
+      {:error, error} when is_binary(error) ->
+        {:noreply,
+         socket
+         |> put_flash(:error, error)
+         |> assign(text: text, url: url)}
 
-    for {app, desc, vsn} <- Application.started_applications(),
-        app = to_string(app),
-        String.starts_with?(app, query) and not List.starts_with?(desc, ~c"ERTS"),
-        into: %{},
-        do: {app, vsn}
+      {:error, _error} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Connection error, try again")
+         |> assign(text: text, url: url)}
+    end
   end
 end
